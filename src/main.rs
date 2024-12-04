@@ -22,7 +22,7 @@ impl<T> State<T> {
     }
 }
 
-struct RowOne<'a>(
+struct LEDrow<'a>(
     State<&'a mut p0::P0_28<Output<PushPull>>>,
     State<&'a mut p0::P0_11<Output<PushPull>>>,
     State<&'a mut p0::P0_31<Output<PushPull>>>,
@@ -30,44 +30,59 @@ struct RowOne<'a>(
     State<&'a mut p0::P0_30<Output<PushPull>>>,
 );
 
-impl RowOne<'_> {
+impl LEDrow<'_> {
+    fn shift_right(&mut self) {
+        if self.0.state == true {
+            self.0.state = false;
+            self.1.state = true
+        } else if self.1.state == true {
+            self.1.state = false;
+            self.2.state = true
+        } else if self.2.state == true {
+            self.2.state = false;
+            self.3.state = true
+        } else if self.3.state == true {
+            self.3.state = false;
+            self.4.state = true
+        } else if self.4.state == true {
+            self.4.state = false;
+            self.0.state = true
+        }
+    }
+
+    fn shift_left(&mut self) {
+        if self.4.state == true {
+            self.4.state = false;
+            self.3.state = true
+        } else if self.3.state == true {
+            self.3.state = false;
+            self.2.state = true
+        } else if self.2.state == true {
+            self.2.state = false;
+            self.1.state = true
+        } else if self.1.state == true {
+            self.1.state = false;
+            self.0.state = true
+        } else if self.0.state == true {
+            self.0.state = false;
+            self.4.state = true
+        }
+    }
+
+    fn set_row(&mut self, col1: bool, col2: bool, col3: bool, col4: bool, col5: bool) {
+        self.0.state = col1;
+        self.1.state = col2;
+        self.2.state = col3;
+        self.3.state = col4;
+        self.4.state = col5;
+    }
+
     fn process(&mut self, action: Action) {
         match action {
-            Action::ShiftRight => {
-                if self.0.state == true {
-                    self.0.state = false;
-                    self.1.state = true
-                } else if self.1.state == true {
-                    self.1.state = false;
-                    self.2.state = true
-                } else if self.2.state == true {
-                    self.2.state = false;
-                    self.3.state = true
-                } else if self.3.state == true {
-                    self.3.state = false;
-                    self.4.state = true
-                } else if self.4.state == true {
-                    self.4.state = false;
-                    self.0.state = true
-                }
-            }
-            Action::ShiftLeft => {
-                if self.4.state == true {
-                    self.4.state = false;
-                    self.3.state = true
-                } else if self.3.state == true {
-                    self.3.state = false;
-                    self.2.state = true
-                } else if self.2.state == true {
-                    self.2.state = false;
-                    self.1.state = true
-                } else if self.1.state == true {
-                    self.1.state = false;
-                    self.0.state = true
-                } else if self.0.state == true {
-                    self.0.state = false;
-                    self.4.state = true
-                }
+            Action::ShiftRight => self.shift_right(),
+            Action::ShiftLeft => self.shift_left(),
+            Action::SetRow(col1, col2, col3, col4, col5) => {
+                self.set_row(col1, col2, col3, col4, col5)
             }
         }
     }
@@ -85,6 +100,7 @@ impl RowOne<'_> {
 enum Action {
     ShiftRight,
     ShiftLeft,
+    SetRow(bool, bool, bool, bool, bool),
 }
 
 #[entry]
@@ -99,12 +115,16 @@ fn main() -> ! {
     let mut col3 = port0.p0_31.into_push_pull_output(Level::High);
     let mut col4 = port1.p1_05.into_push_pull_output(Level::High);
     let mut col5 = port0.p0_30.into_push_pull_output(Level::High);
-    let _row1 = port0.p0_21.into_push_pull_output(Level::High);
+    let mut row1 = port0.p0_21.into_push_pull_output(Level::Low);
+    let mut row2 = port0.p0_22.into_push_pull_output(Level::Low);
+    let mut row3 = port0.p0_15.into_push_pull_output(Level::Low);
+    let mut row4 = port0.p0_24.into_push_pull_output(Level::Low);
+    let mut row5 = port0.p0_19.into_push_pull_output(Level::Low);
 
     // let mut button_a = port0.p0_14.into_pullup_input();
 
-    let mut leds: RowOne = RowOne(
-        State::from(&mut col1, true),
+    let mut leds: LEDrow = LEDrow(
+        State::from(&mut col1, false),
         State::from(&mut col2, false),
         State::from(&mut col3, false),
         State::from(&mut col4, false),
@@ -112,9 +132,43 @@ fn main() -> ! {
     );
 
     loop {
+        let _ = row5.set_low();
+        let _ = row1.set_high();
+        leds.process(Action::SetRow(false, false, true, false, false));
         leds.output();
-        leds.process(Action::ShiftRight);
-        for _ in 0..200_000 {
+        for _ in 0..1_000 {
+            nop();
+        }
+
+        let _ = row1.set_low();
+        let _ = row2.set_high();
+        leds.process(Action::SetRow(false, true, true, false, false));
+        leds.output();
+        for _ in 0..1_000 {
+            nop();
+        }
+
+        let _ = row2.set_low();
+        let _ = row3.set_high();
+        leds.process(Action::SetRow(true, false, true, false, false));
+        leds.output();
+        for _ in 0..1_000 {
+            nop();
+        }
+
+        let _ = row3.set_low();
+        let _ = row4.set_high();
+        leds.process(Action::SetRow(false, false, true, false, false));
+        leds.output();
+        for _ in 0..1_000 {
+            nop();
+        }
+
+        let _ = row4.set_low();
+        let _ = row5.set_high();
+        leds.process(Action::SetRow(true, true, true, true, true));
+        leds.output();
+        for _ in 0..1_000 {
             nop();
         }
     }
