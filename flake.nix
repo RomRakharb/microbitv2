@@ -17,14 +17,18 @@
         cargo-binutils
         probe-rs-tools
         gcc-arm-embedded-13
+
+        bacon
       ];
 
-
-      shellHook = ''
+      installPhase = ''
         rustup default stable
         rustup component add rust-analyzer llvm-tools
         rustup target add ${target}
-        echo -e '[language-server.rust-analyzer.config]\ncheck.command = "clippy"\ncheck.allTargets = false\ncargo.target = "${target}"' > ~/.config/helix/languages.toml
+      '';
+
+      shellHook = ''
+        echo -e '[language-server.rust-analyzer.config]\ncheck.allTargets = false\ncargo.target = "${target}"' > ~/.config/helix/languages.toml
         echo -e '[build]\ntarget = "${target}"\n\n[target.${target}]\nrustflags = ["-C", "link-arg=-Tlink.x"]' > ./.cargo/config.toml
         rustup update
         clear
