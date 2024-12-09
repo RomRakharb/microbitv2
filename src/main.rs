@@ -21,13 +21,13 @@ fn main() -> ! {
     let mut led = LedMatrix::init();
 
     led.set_state(
-        [false, true, true, true, true],
-        [true, false, false, false, false],
+        [false, false, true, true, true],
+        [true, true, false, false, false],
     );
     loop {
-        for _ in 0..300_000 {
+        for _ in 0..400_000 {
             nop();
         }
-        led.shift_right();
+        led.shift_left();
     }
 }

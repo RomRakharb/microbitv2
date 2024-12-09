@@ -62,44 +62,32 @@ impl LedMatrix {
     }
 
     pub fn shift_right(&mut self) {
-        let (col, row) = self.get_state();
-        let mut new_col: [bool; 5] = [true; 5];
-        let mut new_row: [bool; 5] = [false; 5];
-
-        for each_row in row {
-            for i in 0..5 {
-                if col[i] == false && each_row == true {
-                    todo
+        let mut exceed_col = true;
+        for i in (0..5).rev() {
+            if self.col[i].is_set_low().unwrap() {
+                let _ = self.col[i].set_high();
+                if i == 4 {
+                    exceed_col = false;
+                } else {
+                    let _ = self.col[i + 1].set_low();
                 }
             }
         }
-
-        for row in &mut self.row {
-            for i in (0..5).rev() {
-                if self.col[i].is_set_low().unwrap() && row.is_set_high().unwrap() {
-                    let _ = self.col[i].set_high();
-                    if i == 4 {
-                        let _ = self.col[0].set_low();
-                    } else {
-                        let _ = self.col[i + 1].set_low();
-                    }
-                }
-            }
-        }
+        let _ = self.col[0].set_state(PinState::from(exceed_col));
     }
 
     pub fn shift_left(&mut self) {
-        for row in &mut self.row {
-            for i in 0..5 {
-                if self.col[i].is_set_low().unwrap() && row.is_set_high().unwrap() {
-                    let _ = self.col[i].set_high();
-                    if i == 0 {
-                        let _ = self.col[4].set_low();
-                    } else {
-                        let _ = self.col[i - 1].set_low();
-                    }
+        let mut exceed_col = true;
+        for i in 0..5 {
+            if self.col[i].is_set_low().unwrap() {
+                let _ = self.col[i].set_high();
+                if i == 0 {
+                    exceed_col = false;
+                } else {
+                    let _ = self.col[i - 1].set_low();
                 }
             }
         }
+        let _ = self.col[4].set_state(PinState::from(exceed_col));
     }
 }
