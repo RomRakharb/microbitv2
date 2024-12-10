@@ -1,14 +1,70 @@
 #![no_std]
 #![no_main]
 
-use core::panic;
-
 use embedded_hal::digital::{OutputPin, PinState, StatefulOutputPin};
 use nrf52833_hal::{
     self as hal,
-    gpio::{p0, p1, Level, Output, Pin, PushPull},
+    gpio::{p0, p1, Floating, Input, Level, Output, Pin, PushPull},
+    pac::Peripherals,
 };
-use rtt_target::{rprint, rprintln};
+
+pub struct Board {
+    port0: p0::Parts,
+    port1: p1::Parts,
+}
+
+impl Board {
+    pub fn init() -> Self {
+        let p = hal::pac::Peripherals::take().unwrap();
+        Self {
+            port0: p0::Parts::new(p.P0),
+            port1: p1::Parts::new(p.P1),
+        }
+    }
+
+    pub fn led_matrix(&self) -> LedMatrix {
+        LedMatrix {
+            col: [
+                self.port0
+                    .p0_28
+                    .into_push_pull_output(Level::High)
+                    .degrade(),
+                self.port0
+                    .p0_11
+                    .into_push_pull_output(Level::High)
+                    .degrade(),
+                self.port0
+                    .p0_31
+                    .into_push_pull_output(Level::High)
+                    .degrade(),
+                self.port1
+                    .p1_05
+                    .into_push_pull_output(Level::High)
+                    .degrade(),
+                self.port0
+                    .p0_30
+                    .into_push_pull_output(Level::High)
+                    .degrade(),
+            ],
+            row: [
+                self.port0.p0_21.into_push_pull_output(Level::Low).degrade(),
+                self.port0.p0_22.into_push_pull_output(Level::Low).degrade(),
+                self.port0.p0_15.into_push_pull_output(Level::Low).degrade(),
+                self.port0.p0_24.into_push_pull_output(Level::Low).degrade(),
+                self.port0.p0_19.into_push_pull_output(Level::Low).degrade(),
+            ],
+        }
+    }
+
+    pub fn button(self) -> Button {
+        let board = self;
+        Button {
+            a: board.port0.p0_14.into_floating_input().degrade(),
+            b: board.port0.p0_23.into_floating_input().degrade(),
+        }
+    }
+}
+
 enum Action {
     ShiftRight,
     ShiftLeft,
@@ -21,29 +77,6 @@ pub struct LedMatrix {
 }
 
 impl LedMatrix {
-    pub fn init() -> Self {
-        let p = hal::pac::Peripherals::take().unwrap();
-        let port0 = p0::Parts::new(p.P0);
-        let port1 = p1::Parts::new(p.P1);
-
-        Self {
-            col: [
-                port0.p0_28.into_push_pull_output(Level::High).degrade(),
-                port0.p0_11.into_push_pull_output(Level::High).degrade(),
-                port0.p0_31.into_push_pull_output(Level::High).degrade(),
-                port1.p1_05.into_push_pull_output(Level::High).degrade(),
-                port0.p0_30.into_push_pull_output(Level::High).degrade(),
-            ],
-            row: [
-                port0.p0_21.into_push_pull_output(Level::Low).degrade(),
-                port0.p0_22.into_push_pull_output(Level::Low).degrade(),
-                port0.p0_15.into_push_pull_output(Level::Low).degrade(),
-                port0.p0_24.into_push_pull_output(Level::Low).degrade(),
-                port0.p0_19.into_push_pull_output(Level::Low).degrade(),
-            ],
-        }
-    }
-
     pub fn set_state(&mut self, col: [bool; 5], row: [bool; 5]) {
         for i in 0..5 {
             let _ = self.col[i].set_state(PinState::from(col[i]));
@@ -90,4 +123,9 @@ impl LedMatrix {
         }
         let _ = self.col[4].set_state(PinState::from(exceed_col));
     }
+}
+
+pub struct Button {
+    pub a: Pin<Input<Floating>>,
+    pub b: Pin<Input<Floating>>,
 }
