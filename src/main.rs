@@ -3,19 +3,25 @@
 
 use cortex_m::asm::nop;
 use cortex_m_rt::entry;
-use embedded_hal::digital::InputPin;
+use embedded_hal::digital::{InputPin, OutputPin, PinState, StatefulOutputPin};
+use nrf52833_hal::{
+    self as hal,
+    gpio::{p0, p1, Floating, Input, Level, Output, Pin, PushPull},
+    pac::Peripherals,
+};
 use panic_halt as _;
 use rtt_target::{rprintln, rtt_init_print};
 
 // mod time;
-use microbitv2::Board;
+mod day1;
+use microbitv2::{Action, Board, Buttons, LedMatrix};
 
 #[entry]
 fn main() -> ! {
     rtt_init_print!();
-    // let board = Board::init();
-    let mut led = Board::init().led_matrix();
-    // let mut buttons = Board::init().button();
+    let board = Board::init();
+    let mut led = board.led_matrix;
+    let mut buttons = board.buttons;
 
     led.set_state(
         [false, true, true, true, true],
@@ -23,10 +29,12 @@ fn main() -> ! {
     );
 
     loop {
-        for _ in 0..400_000 {
-            nop();
-        }
-        led.shift_right();
+        led.process(Action::Render("0937616047a"));
+        // for _ in 0..400_000 {
+        //     nop();
+        // }
+        // led.shift_right();
+        // led.render();
         // if buttons.a.is_low().unwrap() {}
         // if buttons.b.is_low().unwrap() {}
     }
