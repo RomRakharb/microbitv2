@@ -1,5 +1,4 @@
 #![no_std]
-#![no_main]
 
 use cortex_m::asm::nop;
 use embedded_hal::digital::{OutputPin, PinState, StatefulOutputPin};
@@ -9,6 +8,7 @@ use nrf52833_hal::{
 };
 
 mod character;
+mod time;
 use character::{number::*, Character, BLANK};
 
 pub struct Board {
@@ -38,6 +38,7 @@ impl Board {
                     port0.p0_24.into_push_pull_output(Level::Low).degrade(),
                     port0.p0_19.into_push_pull_output(Level::Low).degrade(),
                 ],
+                display: BLANK,
             },
 
             buttons: Buttons {
@@ -52,11 +53,16 @@ pub enum Action<'a> {
     ShiftRight,
     ShiftLeft,
     Render(&'a str),
+    TransitionLeft(&'a str),
+    TransitionRight(&'a str),
+    TransitionUp(&'a str),
+    TransitionDown(&'a str),
 }
 
 pub struct LedMatrix {
     pub col: [Pin<Output<PushPull>>; 5],
     pub row: [Pin<Output<PushPull>>; 5],
+    pub display: Character,
 }
 
 impl LedMatrix {
@@ -89,6 +95,29 @@ impl LedMatrix {
         self.set_state(col, row);
     }
 
+    pub fn render_character(&mut self, mut character: Character) {
+        for _ in 0..5 {
+            for j in 0..5 {
+                character.0[j].rotate_left(1);
+                self.display.0[j].rotate_left(1);
+                self.display.0[j][4] = character.0[j][4];
+            }
+            for _ in 0..10 {
+                for (index, col) in self.display.0.iter().enumerate() {
+                    let mut row = [false; 5];
+                    row[index] = true;
+                    for i in 0..5 {
+                        let _ = self.col[i].set_state(PinState::from(col[i]));
+                        let _ = self.row[i].set_state(PinState::from(row[i]));
+                    }
+                    for _ in 0..1_500 {
+                        nop();
+                    }
+                }
+            }
+        }
+    }
+
     pub fn render(&mut self, character: &str) {
         let mut each_char = character.chars();
         while let Some(char) = each_char.next() {
@@ -106,16 +135,7 @@ impl LedMatrix {
                 _ => BLANK,
             };
 
-            for _ in 0..100 {
-                for (index, col) in render_char.0.iter().enumerate() {
-                    let mut row = [false; 5];
-                    row[index] = true;
-                    self.set_state(*col, row);
-                    for _ in 0..1_000 {
-                        nop();
-                    }
-                }
-            }
+            self.render_character(render_char);
         }
     }
 

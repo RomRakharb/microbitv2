@@ -29,7 +29,7 @@ fn main() -> ! {
     );
 
     loop {
-        led.process(Action::Render("0937616047a"));
+        led.process(Action::Render("0123456789a"));
         // for _ in 0..400_000 {
         //     nop();
         // }
