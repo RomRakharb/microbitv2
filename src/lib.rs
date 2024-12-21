@@ -49,14 +49,17 @@ impl Board {
     }
 }
 
+pub enum Transition {
+    Left,
+    Right,
+    Up,
+    Down,
+}
+
 pub enum Action<'a> {
     ShiftRight,
     ShiftLeft,
-    Render(&'a str),
-    TransitionLeft(&'a str),
-    TransitionRight(&'a str),
-    TransitionUp(&'a str),
-    TransitionDown(&'a str),
+    Render(&'a str, Option<Transition>),
 }
 
 pub struct LedMatrix {
@@ -95,33 +98,10 @@ impl LedMatrix {
         self.set_state(col, row);
     }
 
-    pub fn render_character(&mut self, mut character: Character) {
-        for _ in 0..5 {
-            for j in 0..5 {
-                character.0[j].rotate_left(1);
-                self.display.0[j].rotate_left(1);
-                self.display.0[j][4] = character.0[j][4];
-            }
-            for _ in 0..10 {
-                for (index, col) in self.display.0.iter().enumerate() {
-                    let mut row = [false; 5];
-                    row[index] = true;
-                    for i in 0..5 {
-                        let _ = self.col[i].set_state(PinState::from(col[i]));
-                        let _ = self.row[i].set_state(PinState::from(row[i]));
-                    }
-                    for _ in 0..1_500 {
-                        nop();
-                    }
-                }
-            }
-        }
-    }
-
-    pub fn render(&mut self, character: &str) {
+    pub fn render(&mut self, character: &str, transition: Option<Transition>) {
         let mut each_char = character.chars();
         while let Some(char) = each_char.next() {
-            let render_char = match char {
+            let mut render_char = match char {
                 '0' => ZERO,
                 '1' => ONE,
                 '2' => TWO,
@@ -135,13 +115,76 @@ impl LedMatrix {
                 _ => BLANK,
             };
 
-            self.render_character(render_char);
+            let iterate_loop = match transition {
+                Some(Transition::Up) | Some(Transition::Down) => 7,
+                _ => 5,
+            };
+
+            for i in 0..iterate_loop {
+                match transition {
+                    Some(Transition::Left) => {
+                        for j in (0..5).rev() {
+                            render_char.0[j].rotate_right(1);
+                            self.display.0[j].rotate_right(1);
+                            self.display.0[j][0] = render_char.0[j][0];
+                        }
+                    }
+                    Some(Transition::Right) => {
+                        for j in 0..5 {
+                            render_char.0[j].rotate_left(1);
+                            self.display.0[j].rotate_left(1);
+                            self.display.0[j][4] = render_char.0[j][4];
+                        }
+                    }
+                    Some(Transition::Up) => {
+                        self.display.0.rotate_left(1);
+                        if i < 2 {
+                            self.display.0[4] = [true, true, true, true, true]
+                        } else {
+                            render_char.0.rotate_left(1);
+                            self.display.0[4] = render_char.0[4];
+                        }
+                    }
+                    Some(Transition::Down) => {
+                        self.display.0.rotate_right(1);
+                        if i < 2 {
+                            self.display.0[0] = [true, true, true, true, true]
+                        } else {
+                            render_char.0.rotate_right(1);
+                            self.display.0[0] = render_char.0[0];
+                        }
+                    }
+                    None => {
+                        if i < 2 {
+                            self.display = BLANK;
+                        } else {
+                            self.display = render_char.clone();
+                        }
+                    }
+                }
+
+                for _ in 0..10 {
+                    //this is time
+                    for (index, col) in self.display.0.iter().enumerate() {
+                        let mut row = [false; 5];
+                        row[index] = true;
+                        for i in 0..5 {
+                            let _ = self.col[i].set_state(PinState::from(col[i]));
+                            let _ = self.row[i].set_state(PinState::from(row[i]));
+                        }
+                        for _ in 0..1_500 {
+                            //this is time
+                            nop();
+                        }
+                    }
+                }
+            }
         }
     }
 
     pub fn process(&mut self, action: Action) {
         match action {
-            Action::Render(character) => self.render(character),
+            Action::Render(character, transition) => self.render(character, transition),
             _ => {}
         }
     }

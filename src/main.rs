@@ -14,7 +14,7 @@ use rtt_target::{rprintln, rtt_init_print};
 
 // mod time;
 mod day1;
-use microbitv2::{Action, Board, Buttons, LedMatrix};
+use microbitv2::{Action, Board, Buttons, LedMatrix, Transition};
 
 #[entry]
 fn main() -> ! {
@@ -29,7 +29,11 @@ fn main() -> ! {
     );
 
     loop {
-        led.process(Action::Render("0123456789a"));
+        led.process(Action::Render("12", Some(Transition::Right)));
+        led.process(Action::Render("34", Some(Transition::Down)));
+        led.process(Action::Render("56", Some(Transition::Left)));
+        led.process(Action::Render("78", Some(Transition::Up)));
+        led.process(Action::Render("90", None));
         // for _ in 0..400_000 {
         //     nop();
         // }

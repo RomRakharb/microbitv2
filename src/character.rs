@@ -1,3 +1,4 @@
+#[derive(Clone)]
 pub struct Character(pub [[bool; 5]; 5]);
 
 pub const BLANK: Character = Character([
